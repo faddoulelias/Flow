@@ -5,6 +5,8 @@
 
 namespace Flow
 {
+    void InitializeGUI();
+
     class ObjectComponent;
 
     enum class ReferencePoint

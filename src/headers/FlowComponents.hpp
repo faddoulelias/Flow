@@ -6,20 +6,33 @@ namespace Flow
 {
     typedef std::function<void(Window *)> RenderFunction;
     typedef std::function<void(Window *, Component *)> ClickEventFunction;
+    typedef std::function<void(Component *)> HoverFunction;
+
+    struct RatioDimension
+    {
+        bool is_ratio;
+        float width;
+        float height;
+    };
 
     class ObjectComponent : public Component
     {
     protected:
         Component *parent;
         Position relative_position;
+        RatioDimension ratio_dimension;
         ReferencePoint parent_reference;
         ReferencePoint child_reference;
         ClickEventFunction on_click;
+        HoverFunction on_hover_enter;
+        HoverFunction on_hover_exit;
         bool hovered;
 
     public:
-        virtual void
-        render(Window *window) = 0;
+        ObjectComponent(Component *parent);
+        ~ObjectComponent() = default;
+
+        virtual void render(Window *window) = 0;
 
         Component *getParent();
         void setParent(Component *parent);
@@ -33,7 +46,13 @@ namespace Flow
         ReferencePoint getChildReference();
         void setChildReference(ReferencePoint child_reference);
 
+        RatioDimension getRatioDimension();
+        void setRatioDimension(RatioDimension relative_dimension);
+
         bool isHovered();
+        void onHoverEnter(HoverFunction on_hover_enter);
+        void onHoverExit(HoverFunction on_hover_exit);
+
         bool isClickable();
 
         void onClick(ClickEventFunction on_click);
@@ -52,7 +71,11 @@ namespace Flow
     {
     private:
         std::string text;
+        int font_size;
+        bool auto_size;
         Color color;
+        std::string path;
+        void *font;
 
     public:
         Text(Component *parent);
@@ -64,6 +87,11 @@ namespace Flow
         Color getColor();
         void setColor(Color color);
 
+        bool isAutoSize();
+        void setAutoSize(bool auto_size);
+
+        void loadFont(std::string path, int font_size);
+
         void render(Window *window) override;
     };
 
@@ -71,6 +99,7 @@ namespace Flow
     {
     private:
         std::string path;
+        void *image;
 
     public:
         Image(Component *parent);
@@ -81,9 +110,4 @@ namespace Flow
 
         void render(Window *window) override;
     };
-
-    // void renderFrame(Window *window, Component *parent, Position position, Dimension dimension, ReferencePoint parent_reference, ReferencePoint child_reference, Color background);
-    // void renderText(Window *window, Component *parent, Position position, Dimension dimension, ReferencePoint parent_reference, ReferencePoint child_reference, Color color, std::string text);
-    // void renderImage(Window *window, Component *parent, Position position, Dimension dimension, ReferencePoint parent_reference, ReferencePoint child_reference, std::string path);
-    // Position computePosition(Dimension parent_dimension, Dimension child_dimension, Position relative_position, Position parent_position, ReferencePoint parent_reference, ReferencePoint child_reference);
 };

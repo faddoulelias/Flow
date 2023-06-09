@@ -14,6 +14,19 @@
 using namespace std;
 using namespace Flow;
 
+void Flow::InitializeGUI()
+{
+    if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
+    {
+        throw runtime_error("error initializing SDL: " + string(SDL_GetError()));
+    }
+
+    if (TTF_Init() != 0)
+    {
+        throw runtime_error("error initializing TTF: " + string(TTF_GetError()));
+    }
+}
+
 /**
  * Position
  */
@@ -175,22 +188,13 @@ void Window::render()
 
 void Window::mainLoop()
 {
-    if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
-    {
-        throw runtime_error("error initializing SDL: " + string(SDL_GetError()));
-    }
-
-    if (TTF_Init() != 0)
-    {
-        throw runtime_error("error initializing TTF: " + string(TTF_GetError()));
-    }
-
     this->window = SDL_CreateWindow(this->title.c_str(),
                                     SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                                     this->dimension.width, this->dimension.height,
                                     SDL_WINDOW_SHOWN | (this->resizable ? SDL_WINDOW_RESIZABLE : 0));
 
     renderer = SDL_CreateRenderer((SDL_Window *)this->window, -1, SDL_RENDERER_ACCELERATED);
+    SDL_SetRenderDrawBlendMode((SDL_Renderer *)this->renderer, SDL_BLENDMODE_BLEND);
 
     if (!this->window)
     {
