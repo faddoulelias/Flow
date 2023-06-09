@@ -7,6 +7,7 @@ namespace Flow
     typedef std::function<void(Window *)> RenderFunction;
     typedef std::function<void(Window *, Component *)> ClickEventFunction;
     typedef std::function<void(Component *)> HoverFunction;
+    typedef std::function<void(Window *, Component *, std::string)> WriteFunction;
 
     struct RatioDimension
     {
@@ -26,7 +27,9 @@ namespace Flow
         ClickEventFunction on_click;
         HoverFunction on_hover_enter;
         HoverFunction on_hover_exit;
+        WriteFunction on_write;
         bool hovered;
+        bool focused;
 
     public:
         ObjectComponent(Component *parent);
@@ -50,6 +53,8 @@ namespace Flow
         void setRatioDimension(RatioDimension relative_dimension);
 
         bool isHovered();
+        void forceUnhover();
+
         void onHoverEnter(HoverFunction on_hover_enter);
         void onHoverExit(HoverFunction on_hover_exit);
 
@@ -57,6 +62,12 @@ namespace Flow
 
         void onClick(ClickEventFunction on_click);
         void handleOnClick(Window *window);
+
+        void onWrite(WriteFunction on_write);
+        void handleOnWrite(Window *window, std::string characters);
+
+        void setFocused(bool focused);
+        bool isFocused();
     };
 
     class Frame : public ObjectComponent

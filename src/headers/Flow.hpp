@@ -9,6 +9,12 @@ namespace Flow
 
     class ObjectComponent;
 
+    struct ObjectComponentPagePair
+    {
+        int id;
+        ObjectComponent *component;
+    };
+
     enum class ReferencePoint
     {
         Absolute,
@@ -59,9 +65,6 @@ namespace Flow
 
         Color getBackground();
         void setBackground(Color color);
-
-        void addChild(int id, Component child);
-        void removeChild(int id);
     };
 
     class Window : public Component
@@ -75,7 +78,8 @@ namespace Flow
         void *window;
         void *renderer;
 
-        std::map<int, ObjectComponent *> children;
+        std::map<int, std::pair<int, ObjectComponent *>> children;
+        int current_page;
 
         void handleEvent(void *event);
         void render();
@@ -95,8 +99,11 @@ namespace Flow
 
         void *getRenderer();
 
-        void addComponent(int id, ObjectComponent *component);
+        void addComponent(int page_id, int component_id, ObjectComponent *component);
         void removeComponent(int id);
+
+        void setCurrentPage(int page_id);
+        int getCurrentPage();
 
         void mainLoop();
     };

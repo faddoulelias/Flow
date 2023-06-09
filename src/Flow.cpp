@@ -119,9 +119,9 @@ void *Window::getRenderer()
     return this->renderer;
 }
 
-void Window::addComponent(int id, ObjectComponent *component)
+void Window::addComponent(int page_id, int component_id, ObjectComponent *component)
 {
-    this->children[id] = component;
+    this->children[component_id] = {page_id, component};
 }
 
 void Window::removeComponent(int id)
@@ -150,9 +150,47 @@ void Window::handleEvent(void *event)
     case SDL_MOUSEBUTTONDOWN:
         for (const auto &[id, component] : this->children)
         {
-            if (component->isHovered())
+            component.second->setFocused(false);
+            if (component.first != this->current_page)
             {
-                component->handleOnClick(this);
+                component.second->forceUnhover();
+                continue;
+            }
+
+            if (component.second->isHovered())
+            {
+                component.second->setFocused(true);
+                component.second->handleOnClick(this);
+            }
+        }
+        break;
+
+    // case we write a character or backspace
+    case SDL_TEXTINPUT:
+        for (const auto &[id, component] : this->children)
+        {
+            if (component.first != this->current_page)
+            {
+                component.second->forceUnhover();
+                continue;
+            }
+
+            component.second->handleOnWrite(this, current_event->text.text);
+        }
+        break;
+    // handle backspace
+    case SDL_KEYDOWN:
+        if (current_event->key.keysym.sym == SDLK_BACKSPACE)
+        {
+            for (const auto &[id, component] : this->children)
+            {
+                if (component.first != this->current_page)
+                {
+                    component.second->forceUnhover();
+                    continue;
+                }
+
+                component.second->handleOnWrite(this, "\b");
             }
         }
         break;
@@ -167,8 +205,11 @@ void Window::render()
     bool clickable_component_hovered = false;
     for (const auto &[id, component] : this->children)
     {
-        component->render(this);
-        if (component->isHovered() && component->isClickable())
+        if (component.first != this->current_page)
+            continue;
+
+        component.second->render(this);
+        if (component.second->isHovered() && component.second->isClickable())
         {
             clickable_component_hovered = true;
         }
@@ -210,4 +251,22 @@ void Window::mainLoop()
             this->render();
         }
     }
+}
+
+void Window::setCurrentPage(int page_id)
+{
+    this->current_page = page_id;
+    for (const auto &[id, component] : this->children)
+    {
+        if (component.first != this->current_page)
+        {
+            component.second->forceUnhover();
+            continue;
+        }
+    }
+}
+
+int Window::getCurrentPage()
+{
+    return this->current_page;
 }

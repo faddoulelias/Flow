@@ -139,6 +139,8 @@ ObjectComponent::ObjectComponent(Component *parent)
     this->on_click = nullptr;
     this->on_hover_enter = nullptr;
     this->on_hover_exit = nullptr;
+    this->on_write = nullptr;
+    this->focused = false;
 }
 
 Component *ObjectComponent::getParent()
@@ -196,6 +198,13 @@ bool ObjectComponent::isHovered()
     return hovered;
 }
 
+void ObjectComponent::forceUnhover()
+{
+    hovered = false;
+    if (this->on_hover_exit != nullptr)
+        this->on_hover_exit(this);
+}
+
 bool ObjectComponent::isClickable()
 {
     return (this->on_click != nullptr);
@@ -224,6 +233,28 @@ void ObjectComponent::onHoverExit(HoverFunction on_hover_exit)
     this->on_hover_exit = on_hover_exit;
 }
 
+void ObjectComponent::onWrite(WriteFunction on_write)
+{
+    this->on_write = on_write;
+}
+
+void ObjectComponent::handleOnWrite(Window *window, std::string characters)
+{
+    if (on_write != nullptr)
+    {
+        on_write(window, this, characters);
+    }
+}
+
+void ObjectComponent::setFocused(bool focused)
+{
+    this->focused = focused;
+}
+
+bool ObjectComponent::isFocused()
+{
+    return focused;
+}
 /* ------------------------------------------------------------------------------------------------------------------------------- */
 /* ------------------------------------------------------------ Frame ------------------------------------------------------------ */
 /* ------------------------------------------------------------------------------------------------------------------------------- */
