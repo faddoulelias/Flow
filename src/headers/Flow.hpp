@@ -78,7 +78,7 @@ namespace Flow
         void *window;
         void *renderer;
 
-        std::map<int, std::pair<int, ObjectComponent *>> children;
+        std::vector<std::pair<int, ObjectComponent *>> children;
         int current_page;
 
         void handleEvent(void *event);
@@ -99,7 +99,7 @@ namespace Flow
 
         void *getRenderer();
 
-        void addComponent(int page_id, int component_id, ObjectComponent *component);
+        void addComponent(int page_id, ObjectComponent *component);
         void removeComponent(int id);
 
         void setCurrentPage(int page_id);

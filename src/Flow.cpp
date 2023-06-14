@@ -119,14 +119,21 @@ void *Window::getRenderer()
     return this->renderer;
 }
 
-void Window::addComponent(int page_id, int component_id, ObjectComponent *component)
+void Window::addComponent(int page_id, ObjectComponent *component)
 {
-    this->children[component_id] = {page_id, component};
+    this->children.push_back(make_pair(page_id, component));
 }
 
 void Window::removeComponent(int id)
 {
-    this->children.erase(id);
+    for (auto it = this->children.begin(); it != this->children.end(); ++it)
+    {
+        if (it->second->getId() == id)
+        {
+            this->children.erase(it);
+            break;
+        }
+    }
 }
 
 void Window::handleEvent(void *event)
@@ -148,49 +155,89 @@ void Window::handleEvent(void *event)
         }
         break;
     case SDL_MOUSEBUTTONDOWN:
-        for (const auto &[id, component] : this->children)
+        // for (const auto &[id, component] : this->children)
+        // {
+        //     component.second->setFocused(false);
+        //     if (component.first != this->current_page)
+        //     {
+        //         component.second->forceUnhover();
+        //         continue;
+        //     }
+
+        //     if (component.second->isHovered())
+        //     {
+        //         component.second->setFocused(true);
+        //         component.second->handleOnClick(this);
+        //     }
+        // }
+        for (auto it = this->children.begin(); it != this->children.end(); ++it)
         {
-            component.second->setFocused(false);
-            if (component.first != this->current_page)
+            if (it->first != this->current_page)
             {
-                component.second->forceUnhover();
+                it->second->forceUnhover();
                 continue;
             }
 
-            if (component.second->isHovered())
+            if (it->second->isHovered())
             {
-                component.second->setFocused(true);
-                component.second->handleOnClick(this);
+                it->second->handleOnClick(this);
+            }
+            else
+            {
+                it->second->handleOnClickOutside(this);
             }
         }
         break;
 
     // case we write a character or backspace
     case SDL_TEXTINPUT:
-        for (const auto &[id, component] : this->children)
+        // for (const auto &[id, component] : this->children)
+        // {
+        //     if (component.first != this->current_page)
+        //     {
+        //         component.second->forceUnhover();
+        //         continue;
+        //     }
+
+        //     component.second->handleOnWrite(this, current_event->text.text);
+        // }
+        for (auto it = this->children.begin(); it != this->children.end(); ++it)
         {
-            if (component.first != this->current_page)
+            if (it->first != this->current_page)
             {
-                component.second->forceUnhover();
+                it->second->forceUnhover();
                 continue;
             }
 
-            component.second->handleOnWrite(this, current_event->text.text);
+            it->second->handleOnWrite(this, current_event->text.text);
         }
         break;
     // handle backspace
     case SDL_KEYDOWN:
+        // if (current_event->key.keysym.sym == SDLK_BACKSPACE)
+        // {
+        //     for (const auto &[id, component] : this->children)
+        //     {
+        //         if (component.first != this->current_page)
+        //         {
+        //             component.second->forceUnhover();
+        //             continue;
+        //         }
+
+        //         component.second->handleOnWrite(this, "\b");
+        //     }
+        // }
         if (current_event->key.keysym.sym == SDLK_BACKSPACE)
         {
-            for (const auto &[id, component] : this->children)
+            for (auto it = this->children.begin(); it != this->children.end(); ++it)
             {
-                if (component.first != this->current_page)
+                if (it->first != this->current_page)
                 {
-                    component.second->forceUnhover();
+                    it->second->forceUnhover();
                     continue;
                 }
 
-                component.second->handleOnWrite(this, "\b");
+                it->second->handleOnWrite(this, "\b");
             }
         }
         break;
@@ -203,13 +250,24 @@ void Window::render()
     SDL_RenderClear((SDL_Renderer *)this->renderer);
 
     bool clickable_component_hovered = false;
-    for (const auto &[id, component] : this->children)
+    // for (const auto &[id, component] : this->children)
+    // {
+    //     if (component.first != this->current_page)
+    //         continue;
+
+    //     component.second->render(this);
+    //     if (component.second->isHovered() && component.second->isClickable())
+    //     {
+    //         clickable_component_hovered = true;
+    //     }
+    // }
+    for (auto it = this->children.begin(); it != this->children.end(); ++it)
     {
-        if (component.first != this->current_page)
+        if (it->first != this->current_page)
             continue;
 
-        component.second->render(this);
-        if (component.second->isHovered() && component.second->isClickable())
+        it->second->render(this);
+        if (it->second->isHovered() && it->second->isClickable())
         {
             clickable_component_hovered = true;
         }
@@ -256,11 +314,20 @@ void Window::mainLoop()
 void Window::setCurrentPage(int page_id)
 {
     this->current_page = page_id;
-    for (const auto &[id, component] : this->children)
+    //     for (const auto &[id, component] : this->children)
+    //     {
+    //         if (component.first != this->current_page)
+    //         {
+    //             component.second->forceUnhover();
+    //             continue;
+    //         }
+    //     }
+    // }
+    for (auto it = this->children.begin(); it != this->children.end(); ++it)
     {
-        if (component.first != this->current_page)
+        if (it->first != this->current_page)
         {
-            component.second->forceUnhover();
+            it->second->forceUnhover();
             continue;
         }
     }

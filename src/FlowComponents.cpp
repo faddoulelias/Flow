@@ -137,11 +137,17 @@ ObjectComponent::ObjectComponent(Component *parent)
     this->child_reference = ReferencePoint::TopLeft;
     this->ratio_dimension = {0, 0, 0};
     this->on_click = nullptr;
+    this->on_click_outside = nullptr;
     this->on_hover_enter = nullptr;
     this->on_hover_exit = nullptr;
     this->on_write = nullptr;
     this->focused = false;
+    this->id = -1;
 }
+
+int ObjectComponent::getId() { return id; }
+
+void ObjectComponent::setId(int id) { this->id = id; }
 
 Component *ObjectComponent::getParent()
 {
@@ -220,6 +226,19 @@ void ObjectComponent::handleOnClick(Window *window)
     if (on_click != nullptr)
     {
         on_click(window, this);
+    }
+}
+
+void ObjectComponent::onClickOutside(ClickEventFunction on_click_outside)
+{
+    this->on_click_outside = on_click_outside;
+}
+
+void ObjectComponent::handleOnClickOutside(Window *window)
+{
+    if (on_click_outside != nullptr)
+    {
+        on_click_outside(window, this);
     }
 }
 
@@ -394,7 +413,17 @@ void Text::render(Window *window)
     SDL_Renderer *renderer = (SDL_Renderer *)window->getRenderer();
     SDL_Color sdl_color = {(Uint8)color.r, (Uint8)color.g, (Uint8)color.b, (Uint8)color.a};
 
-    unique_ptr<SDL_Surface, decltype(&SDL_FreeSurface)> surface(TTF_RenderText_Blended((TTF_Font *)this->font, text.c_str(), sdl_color), SDL_FreeSurface);
+    const char *text;
+    if (this->text == "")
+    {
+        text = " ";
+    }
+    else
+    {
+        text = this->text.c_str();
+    }
+
+    unique_ptr<SDL_Surface, decltype(&SDL_FreeSurface)> surface(TTF_RenderText_Blended((TTF_Font *)this->font, text, sdl_color), SDL_FreeSurface);
     unique_ptr<SDL_Texture, decltype(&SDL_DestroyTexture)> texture(SDL_CreateTextureFromSurface(renderer, surface.get()), SDL_DestroyTexture);
 
     if (auto_size)

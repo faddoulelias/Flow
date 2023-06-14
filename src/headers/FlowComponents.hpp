@@ -25,17 +25,22 @@ namespace Flow
         ReferencePoint parent_reference;
         ReferencePoint child_reference;
         ClickEventFunction on_click;
+        ClickEventFunction on_click_outside;
         HoverFunction on_hover_enter;
         HoverFunction on_hover_exit;
         WriteFunction on_write;
         bool hovered;
         bool focused;
+        int id;
 
     public:
         ObjectComponent(Component *parent);
         ~ObjectComponent() = default;
 
         virtual void render(Window *window) = 0;
+
+        int getId();
+        void setId(int id);
 
         Component *getParent();
         void setParent(Component *parent);
@@ -62,6 +67,9 @@ namespace Flow
 
         void onClick(ClickEventFunction on_click);
         void handleOnClick(Window *window);
+
+        void onClickOutside(ClickEventFunction on_click_outside);
+        void handleOnClickOutside(Window *window);
 
         void onWrite(WriteFunction on_write);
         void handleOnWrite(Window *window, std::string characters);
