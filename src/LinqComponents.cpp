@@ -507,7 +507,7 @@ std::string LinqComponents::createVoteDataSection(Flow::Window *window, Flow::Co
     std::string label = "vote-data-label";
 
     Flow::Text *page_title = new Flow::Text(parent);
-    // page_title->setLabel(label);
+    page_title->setLabel(label);
     page_title->setText("It is time to vote");
     page_title->loadFont(LinqComponents::OldStandardTTBold, 35);
     page_title->setRelativePosition({0, 30});
@@ -521,7 +521,7 @@ std::string LinqComponents::createVoteDataSection(Flow::Window *window, Flow::Co
     if (!is_your_turn)
     {
         Flow::Text *turn_label = new Flow::Text(parent);
-        // turn_label->setLabel(label);
+        turn_label->setLabel(label);
         turn_label->setText("It is " + player_voting + "'s turn to vote !!");
         turn_label->loadFont(LinqComponents::OldStandardTT, 25);
         turn_label->setRelativePosition({0, 0});
@@ -536,7 +536,7 @@ std::string LinqComponents::createVoteDataSection(Flow::Window *window, Flow::Co
     else
     {
         Flow::Text *turn_label = new Flow::Text(parent);
-        // turn_label->setLabel(label);
+        turn_label->setLabel(label);
         turn_label->setText("It is your turn to vote, pick wisely !");
         turn_label->loadFont(LinqComponents::OldStandardTTItalic, 25);
         turn_label->setRelativePosition({0, 80});
@@ -562,7 +562,7 @@ std::string LinqComponents::createVoteDataSection(Flow::Window *window, Flow::Co
     {
         i++;
         Flow::Image *player_button_frame = new Flow::Image(parent);
-        // player_button_frame->setLabel(label);
+        player_button_frame->setLabel(label);
         player_button_frame->setPath(LinqComponents::MenuBoardButtonImagePath);
         player_button_frame->setRelativePosition({0, 150 + 45 * i});
         player_button_frame->setBackground({0, 0, 255, 255});
@@ -601,7 +601,7 @@ std::string LinqComponents::createVoteDataSection(Flow::Window *window, Flow::Co
         window->addComponent(page_id, player_button_frame);
 
         Flow::Text *player_button_text = new Flow::Text(player_button_frame);
-        // player_button_text->setLabel(label);
+        player_button_text->setLabel(label);
         player_button_text->setText(player_name);
         player_button_text->loadFont(LinqComponents::OldStandardTT, 18);
         player_button_text->setRelativePosition({0, 0});
@@ -615,7 +615,7 @@ std::string LinqComponents::createVoteDataSection(Flow::Window *window, Flow::Co
 
     i += 2;
     Flow::Text *error_text = new Flow::Text(parent);
-    // error_text->setLabel(label);
+    error_text->setLabel(label);
     error_text->setText("");
     error_text->loadFont(LinqComponents::OldStandardTTBold, 18);
     error_text->setRelativePosition({0, 150 + 45 * i});
@@ -628,7 +628,7 @@ std::string LinqComponents::createVoteDataSection(Flow::Window *window, Flow::Co
 
     i++;
     Flow::Image *player_button_frame = new Flow::Image(parent);
-    // player_button_frame->setLabel(label);
+    player_button_frame->setLabel(label);
     player_button_frame->setPath(LinqComponents::MenuBoardButtonImagePath);
     player_button_frame->setRelativePosition({0, 135 + 45 * i});
     player_button_frame->setBackground({0, 0, 255, 255});
@@ -646,7 +646,7 @@ std::string LinqComponents::createVoteDataSection(Flow::Window *window, Flow::Co
     window->addComponent(page_id, player_button_frame);
 
     Flow::Text *player_button_text = new Flow::Text(player_button_frame);
-    // player_button_text->setLabel(label);
+    player_button_text->setLabel(label);
     player_button_text->setText("VOTE");
     player_button_text->loadFont(LinqComponents::OldStandardTT, 18);
     player_button_text->setRelativePosition({0, 0});

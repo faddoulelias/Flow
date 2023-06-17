@@ -65,9 +65,11 @@ int main(int argc, char *argv[])
 
 	LinqComponents::createVoteDataSection(
 		&window, game_board, GAME_PAGE, true, "Yara", {"Pierre", "Claude", "Elias", "Mira", "Yara"},
-		[](std::pair<std::string, std::string> vote)
+		[&window](std::pair<std::string, std::string> vote)
 		{
 			std::cout << "Voted " << vote.first << " " << vote.second << std::endl;
+			window.onNextRender([&window]()
+								{ window.removeComponentsByLabel("vote-data-label"); });
 		},
 		selected_spies,
 		LinqComponents::Role::Spy);
