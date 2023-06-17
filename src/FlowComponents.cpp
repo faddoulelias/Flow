@@ -129,6 +129,30 @@ bool isMouseInside(Position object_position, Dimension object_dimension)
 /* ------------------------------------------------------------------------------------------------------------------------------- */
 /* ------------------------------------------------------- ObjectComponent ------------------------------------------------------- */
 /* ------------------------------------------------------------------------------------------------------------------------------- */
+ObjectComponent::ObjectComponent(Component *parent)
+{
+    this->parent = parent;
+    this->relative_position = {0, 0};
+    this->parent_reference = ReferencePoint::TopLeft;
+    this->child_reference = ReferencePoint::TopLeft;
+    this->ratio_dimension = {0, 0, 0};
+    this->on_click = nullptr;
+    this->on_click_outside = nullptr;
+    this->on_hover_enter = nullptr;
+    this->on_hover_exit = nullptr;
+    this->on_write = nullptr;
+    this->focused = false;
+    this->id = -1;
+    this->label = std::string("");
+}
+
+int ObjectComponent::getId() { return id; }
+
+void ObjectComponent::setId(int id) { this->id = id; }
+
+void ObjectComponent::setLabel(std::string label) { this->label = label; };
+
+std::string ObjectComponent::getLabel() { return label; };
 
 Component *ObjectComponent::getParent()
 {
@@ -170,9 +194,26 @@ void ObjectComponent::setChildReference(ReferencePoint child_reference)
     this->child_reference = child_reference;
 }
 
+RatioDimension ObjectComponent::getRatioDimension()
+{
+    return ratio_dimension;
+}
+
+void ObjectComponent::setRatioDimension(RatioDimension relative_dimension)
+{
+    this->ratio_dimension = relative_dimension;
+}
+
 bool ObjectComponent::isHovered()
 {
     return hovered;
+}
+
+void ObjectComponent::forceUnhover()
+{
+    hovered = false;
+    if (this->on_hover_exit != nullptr)
+        this->on_hover_exit(this);
 }
 
 bool ObjectComponent::isClickable()
@@ -193,25 +234,87 @@ void ObjectComponent::handleOnClick(Window *window)
     }
 }
 
+void ObjectComponent::onClickOutside(ClickEventFunction on_click_outside)
+{
+    this->on_click_outside = on_click_outside;
+}
+
+void ObjectComponent::handleOnClickOutside(Window *window)
+{
+    if (on_click_outside != nullptr)
+    {
+        on_click_outside(window, this);
+    }
+}
+
+void ObjectComponent::onHoverEnter(HoverFunction on_hover_enter)
+{
+    this->on_hover_enter = on_hover_enter;
+}
+
+void ObjectComponent::onHoverExit(HoverFunction on_hover_exit)
+{
+    this->on_hover_exit = on_hover_exit;
+}
+
+void ObjectComponent::onWrite(WriteFunction on_write)
+{
+    this->on_write = on_write;
+}
+
+void ObjectComponent::handleOnWrite(Window *window, std::string characters)
+{
+    if (on_write != nullptr)
+    {
+        on_write(window, this, characters);
+    }
+}
+
+void ObjectComponent::setFocused(bool focused)
+{
+    this->focused = focused;
+}
+
+bool ObjectComponent::isFocused()
+{
+    return focused;
+}
 /* ------------------------------------------------------------------------------------------------------------------------------- */
 /* ------------------------------------------------------------ Frame ------------------------------------------------------------ */
 /* ------------------------------------------------------------------------------------------------------------------------------- */
 
-Frame::Frame(Component *parent)
+Frame::Frame(Component *parent) : ObjectComponent(parent)
 {
-    this->parent = parent;
-    this->relative_position = {0, 0};
-    this->parent_reference = ReferencePoint::TopLeft;
-    this->child_reference = ReferencePoint::TopLeft;
-    this->dimension = {0, 0};
-    this->on_click = nullptr;
 }
 
 void Frame::render(Window *window)
 {
+    if (this->ratio_dimension.is_ratio == 1)
+    {
+        Dimension parent_dimension = parent->getDimension();
+        Dimension dimension = {(int)(parent_dimension.width * ratio_dimension.width), (int)(parent_dimension.height * ratio_dimension.height)};
+        this->setDimension(dimension);
+    }
+
     Position absolute_pos = computePosition(parent->getDimension(), dimension, relative_position, parent->getPosition(), parent_reference, child_reference);
 
+    bool hovered_before = hovered;
     hovered = isMouseInside(absolute_pos, dimension);
+
+    if (hovered && !hovered_before)
+    {
+        if (on_hover_enter != nullptr)
+        {
+            on_hover_enter(this);
+        }
+    }
+    else if (!hovered && hovered_before)
+    {
+        if (on_hover_exit != nullptr)
+        {
+            on_hover_exit(this);
+        }
+    }
 
     SDL_Rect rect;
     rect.x = absolute_pos.x;
@@ -232,16 +335,15 @@ void Frame::render(Window *window)
 /* ------------------------------------------------------------ Text ------------------------------------------------------------- */
 /* ------------------------------------------------------------------------------------------------------------------------------- */
 
-Text::Text(Component *parent)
+Text::Text(Component *parent) : ObjectComponent(parent)
 {
-    this->parent = parent;
-    this->relative_position = {0, 0};
-    this->parent_reference = ReferencePoint::TopLeft;
-    this->child_reference = ReferencePoint::TopLeft;
-    this->dimension = {0, 0};
-    this->on_click = nullptr;
     this->text = "";
     this->color = {0, 0, 0, 255};
+    this->auto_size = true;
+    this->path = "";
+    this->font = nullptr;
+    this->font_size = 25;
+    this->texture = nullptr;
 }
 
 string Text::getText()
@@ -252,6 +354,7 @@ string Text::getText()
 void Text::setText(std::string text)
 {
     this->text = text;
+    this->texture = nullptr;
 }
 
 Color Text::getColor()
@@ -262,44 +365,111 @@ Color Text::getColor()
 void Text::setColor(Color color)
 {
     this->color = color;
+    this->texture = nullptr;
+}
+
+bool Text::isAutoSize()
+{
+    return auto_size;
+}
+
+void Text::setAutoSize(bool auto_size)
+{
+    this->auto_size = auto_size;
+    this->texture = nullptr;
+}
+
+void Text::loadFont(std::string path, int font_size)
+{
+    this->path = path;
+    this->font_size = font_size;
+    this->font = TTF_OpenFont(path.c_str(), font_size);
+    this->texture = nullptr;
+    if (this->font == nullptr)
+    {
+        printf("Failed to load font! SDL_ttf Error: %s\n", TTF_GetError());
+    }
 }
 
 void Text::render(Window *window)
 {
+    if (this->ratio_dimension.is_ratio == 1)
+    {
+        Dimension parent_dimension = parent->getDimension();
+        Dimension dimension = {(int)(parent_dimension.width * ratio_dimension.width), (int)(parent_dimension.height * ratio_dimension.height)};
+        this->setDimension(dimension);
+    }
+
     Position absolute_pos = computePosition(parent->getDimension(), dimension, relative_position, parent->getPosition(), parent_reference, child_reference);
 
+    bool hovered_before = hovered;
     hovered = isMouseInside(absolute_pos, dimension);
 
-    SDL_Renderer *renderer = (SDL_Renderer *)window->getRenderer();
-    SDL_Color sdl_color = {(Uint8)color.r, (Uint8)color.g, (Uint8)color.b, (Uint8)color.a};
+    if (hovered && !hovered_before)
+    {
+        if (on_hover_enter != nullptr)
+        {
+            on_hover_enter(this);
+        }
+    }
+    else if (!hovered && hovered_before)
+    {
+        if (on_hover_exit != nullptr)
+        {
+            on_hover_exit(this);
+        }
+    }
 
-    unique_ptr<TTF_Font, decltype(&TTF_CloseFont)> font(TTF_OpenFont("./res/fonts/Roboto/Roboto-Regular.ttf", 32), TTF_CloseFont);
-    unique_ptr<SDL_Surface, decltype(&SDL_FreeSurface)> surface(TTF_RenderText_Blended(font.get(), text.c_str(), sdl_color), SDL_FreeSurface);
-    unique_ptr<SDL_Texture, decltype(&SDL_DestroyTexture)> texture(SDL_CreateTextureFromSurface(renderer, surface.get()), SDL_DestroyTexture);
+    const char *text;
+    if (this->text == "")
+    {
+        text = " ";
+    }
+    else
+    {
+        text = this->text.c_str();
+    }
+
+    SDL_Renderer *renderer = (SDL_Renderer *)window->getRenderer();
+    if (this->texture == nullptr)
+    {
+        SDL_Color sdl_color = {(Uint8)color.r, (Uint8)color.g, (Uint8)color.b, (Uint8)color.a};
+        SDL_Surface *surface = TTF_RenderText_Blended((TTF_Font *)this->font, text, sdl_color);
+        this->texture = SDL_CreateTextureFromSurface(renderer, surface);
+        if (this->texture == nullptr)
+        {
+            cout << "Error creating texture : " << SDL_GetError() << endl;
+            return;
+        }
+
+        if (auto_size)
+        {
+            dimension.width = surface->w;
+            dimension.height = surface->h;
+        }
+    }
 
     SDL_Rect text_rect;
     text_rect.x = absolute_pos.x;
     text_rect.y = absolute_pos.y;
-    text_rect.w = surface->w;
-    text_rect.h = surface->h;
+    text_rect.w = dimension.width;
+    text_rect.h = dimension.height;
 
     position = absolute_pos;
 
-    SDL_RenderCopy(renderer, texture.get(), NULL, &text_rect);
+    SDL_SetRenderDrawColor(renderer, background.r, background.g, background.b, background.a);
+    SDL_RenderFillRect(renderer, &text_rect);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+
+    SDL_RenderCopy(renderer, (SDL_Texture *)this->texture, NULL, &text_rect);
 }
 
 /* ------------------------------------------------------------------------------------------------------------------------------- */
 /* ----------------------------------------------------------- Image ------------------------------------------------------------- */
 /* ------------------------------------------------------------------------------------------------------------------------------- */
 
-Image::Image(Component *parent)
+Image::Image(Component *parent) : ObjectComponent(parent)
 {
-    this->parent = parent;
-    this->relative_position = {0, 0};
-    this->parent_reference = ReferencePoint::TopLeft;
-    this->child_reference = ReferencePoint::TopLeft;
-    this->dimension = {0, 0};
-    this->on_click = nullptr;
     this->path = "";
 }
 
@@ -311,24 +481,62 @@ string Image::getPath()
 void Image::setPath(std::string path)
 {
     this->path = path;
+    this->image = nullptr;
 }
 
 void Image::render(Window *window)
 {
+    if (this->ratio_dimension.is_ratio == 1)
+    {
+        Dimension parent_dimension = parent->getDimension();
+        Dimension dimension = {(int)(parent_dimension.width * ratio_dimension.width), (int)(parent_dimension.height * ratio_dimension.height)};
+        this->setDimension(dimension);
+    }
+
     Position absolute_pos = computePosition(parent->getDimension(), dimension, relative_position, parent->getPosition(), parent_reference, child_reference);
 
+    bool hovered_before = hovered;
     hovered = isMouseInside(absolute_pos, dimension);
 
-    unique_ptr<SDL_Surface, decltype(&SDL_FreeSurface)> image_surface(IMG_Load(path.c_str()), SDL_FreeSurface);
-    unique_ptr<SDL_Texture, decltype(&SDL_DestroyTexture)> image_texture(SDL_CreateTextureFromSurface((SDL_Renderer *)window->getRenderer(), image_surface.get()), SDL_DestroyTexture);
+    if (hovered && !hovered_before)
+    {
+        if (on_hover_enter != nullptr)
+        {
+            on_hover_enter(this);
+        }
+    }
+    else if (!hovered && hovered_before)
+    {
+        if (on_hover_exit != nullptr)
+        {
+            on_hover_exit(this);
+        }
+    }
 
-    SDL_Rect image_rect;
-    image_rect.x = absolute_pos.x;
-    image_rect.y = absolute_pos.y;
-    image_rect.w = dimension.width;
-    image_rect.h = dimension.height;
+    try
+    {
+        if (image == nullptr)
+        {
+            this->image = SDL_CreateTextureFromSurface((SDL_Renderer *)window->getRenderer(), IMG_Load(path.c_str()));
+            if (this->image == nullptr)
+            {
+                cout << "Error creating texture : " << SDL_GetError() << endl;
+                return;
+            }
+        }
 
-    position = absolute_pos;
+        SDL_Rect image_rect;
+        image_rect.x = absolute_pos.x;
+        image_rect.y = absolute_pos.y;
+        image_rect.w = dimension.width;
+        image_rect.h = dimension.height;
 
-    SDL_RenderCopy((SDL_Renderer *)window->getRenderer(), image_texture.get(), NULL, &image_rect);
+        position = absolute_pos;
+
+        SDL_RenderCopy((SDL_Renderer *)window->getRenderer(), (SDL_Texture *)this->image, NULL, &image_rect);
+    }
+    catch (const std::exception &e)
+    {
+        cout << "Error creating texture : " << e.what() << endl;
+    }
 }

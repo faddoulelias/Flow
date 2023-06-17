@@ -1,11 +1,20 @@
 #pragma once
+#include <functional>
 #include <vector>
 #include <string>
 #include <map>
 
 namespace Flow
 {
+    void InitializeGUI();
+
     class ObjectComponent;
+
+    struct ObjectComponentPagePair
+    {
+        int id;
+        ObjectComponent *component;
+    };
 
     enum class ReferencePoint
     {
@@ -57,9 +66,6 @@ namespace Flow
 
         Color getBackground();
         void setBackground(Color color);
-
-        void addChild(int id, Component child);
-        void removeChild(int id);
     };
 
     class Window : public Component
@@ -72,8 +78,10 @@ namespace Flow
 
         void *window;
         void *renderer;
+        std::function<void()> on_next_render;
 
-        std::map<int, ObjectComponent *> children;
+        std::vector<std::pair<int, ObjectComponent *>> children;
+        int current_page;
 
         void handleEvent(void *event);
         void render();
@@ -93,8 +101,14 @@ namespace Flow
 
         void *getRenderer();
 
-        void addComponent(int id, ObjectComponent *component);
+        int addComponent(int page_id, ObjectComponent *component);
         void removeComponent(int id);
+        void removeComponentsByLabel(std::string label);
+
+        void setCurrentPage(int page_id);
+        int getCurrentPage();
+
+        void onNextRender(std::function<void()> on_next_render);
 
         void mainLoop();
     };

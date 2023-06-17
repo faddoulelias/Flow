@@ -14,6 +14,19 @@
 using namespace std;
 using namespace Flow;
 
+void Flow::InitializeGUI()
+{
+    if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
+    {
+        throw runtime_error("error initializing SDL: " + string(SDL_GetError()));
+    }
+
+    if (TTF_Init() != 0)
+    {
+        throw runtime_error("error initializing TTF: " + string(TTF_GetError()));
+    }
+}
+
 /**
  * Position
  */
@@ -63,6 +76,7 @@ Window::Window()
     this->isClosed = false;
     this->window = nullptr;
     this->renderer = nullptr;
+    this->on_next_render = nullptr;
 }
 
 Window::~Window()
@@ -106,14 +120,28 @@ void *Window::getRenderer()
     return this->renderer;
 }
 
-void Window::addComponent(int id, ObjectComponent *component)
+int Window::addComponent(int page_id, ObjectComponent *component)
 {
-    this->children[id] = component;
+    int location = this->children.size();
+    this->children.push_back(make_pair(page_id, component));
+
+    return location;
 }
 
 void Window::removeComponent(int id)
 {
-    this->children.erase(id);
+    auto it = std::remove_if(this->children.begin(), this->children.end(), [&, id](std::pair<int, Flow::ObjectComponent *> cmp)
+                             { return cmp.second->getId() == id; });
+
+    this->children.erase(it, this->children.end());
+}
+
+void Window::removeComponentsByLabel(std::string label)
+{
+    auto it = std::remove_if(this->children.begin(), this->children.end(), [&, label](std::pair<int, Flow::ObjectComponent *> cmp)
+                             { return cmp.second->getLabel() == label; });
+
+    this->children.erase(it, this->children.end());
 }
 
 void Window::handleEvent(void *event)
@@ -135,11 +163,54 @@ void Window::handleEvent(void *event)
         }
         break;
     case SDL_MOUSEBUTTONDOWN:
-        for (const auto &[id, component] : this->children)
+        for (auto it = this->children.begin(); it != this->children.end(); ++it)
         {
-            if (component->isHovered())
+            if (it->first != this->current_page)
             {
-                component->handleOnClick(this);
+                it->second->forceUnhover();
+                continue;
+            }
+
+            if (it->second->isHovered())
+            {
+                it->second->handleOnClick(this);
+            }
+        }
+        for (auto it = this->children.begin(); it != this->children.end(); ++it)
+        {
+            if (!it->second->isHovered())
+            {
+                it->second->handleOnClickOutside(this);
+            }
+        }
+        break;
+
+    // case we write a character or backspace
+    case SDL_TEXTINPUT:
+        for (auto it = this->children.begin(); it != this->children.end(); ++it)
+        {
+            if (it->first != this->current_page)
+            {
+                it->second->forceUnhover();
+                continue;
+            }
+
+            it->second->handleOnWrite(this, current_event->text.text);
+        }
+        break;
+    // handle backspace
+    case SDL_KEYDOWN:
+        if (current_event->key.keysym.sym == SDLK_BACKSPACE)
+        {
+            for (auto it = this->children.begin(); it != this->children.end(); ++it)
+            {
+                if (it->first != this->current_page)
+                {
+                    it->second->forceUnhover();
+                    continue;
+                }
+
+                it->second->handleOnWrite(this, "\b");
             }
         }
         break;
@@ -152,10 +223,14 @@ void Window::render()
     SDL_RenderClear((SDL_Renderer *)this->renderer);
 
     bool clickable_component_hovered = false;
-    for (const auto &[id, component] : this->children)
+
+    for (auto it = this->children.begin(); it != this->children.end(); ++it)
     {
-        component->render(this);
-        if (component->isHovered() && component->isClickable())
+        if (it->first != this->current_page)
+            continue;
+
+        it->second->render(this);
+        if (it->second->isHovered() && it->second->isClickable())
         {
             clickable_component_hovered = true;
         }
@@ -175,22 +250,13 @@ void Window::render()
 
 void Window::mainLoop()
 {
-    if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
-    {
-        throw runtime_error("error initializing SDL: " + string(SDL_GetError()));
-    }
-
-    if (TTF_Init() != 0)
-    {
-        throw runtime_error("error initializing TTF: " + string(TTF_GetError()));
-    }
-
     this->window = SDL_CreateWindow(this->title.c_str(),
                                     SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                                     this->dimension.width, this->dimension.height,
                                     SDL_WINDOW_SHOWN | (this->resizable ? SDL_WINDOW_RESIZABLE : 0));
 
     renderer = SDL_CreateRenderer((SDL_Window *)this->window, -1, SDL_RENDERER_ACCELERATED);
+    SDL_SetRenderDrawBlendMode((SDL_Renderer *)this->renderer, SDL_BLENDMODE_BLEND);
 
     if (!this->window)
     {
@@ -202,8 +268,37 @@ void Window::mainLoop()
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
-            this->handleEvent(&event);
+            if (this->on_next_render != nullptr)
+            {
+                this->on_next_render();
+                this->on_next_render = nullptr;
+            }
             this->render();
+            this->handleEvent(&event);
         }
     }
+}
+
+void Window::onNextRender(std::function<void()> on_next_render)
+{
+    this->on_next_render = on_next_render;
+}
+
+void Window::setCurrentPage(int page_id)
+{
+    this->current_page = page_id;
+
+    for (auto it = this->children.begin(); it != this->children.end(); ++it)
+    {
+        if (it->first != this->current_page)
+        {
+            it->second->forceUnhover();
+            continue;
+        }
+    }
+}
+
+int Window::getCurrentPage()
+{
+    return this->current_page;
 }
