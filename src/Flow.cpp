@@ -76,6 +76,7 @@ Window::Window()
     this->isClosed = false;
     this->window = nullptr;
     this->renderer = nullptr;
+    this->on_next_render = nullptr;
 }
 
 Window::~Window()
@@ -119,21 +120,28 @@ void *Window::getRenderer()
     return this->renderer;
 }
 
-void Window::addComponent(int page_id, ObjectComponent *component)
+int Window::addComponent(int page_id, ObjectComponent *component)
 {
+    int location = this->children.size();
     this->children.push_back(make_pair(page_id, component));
+
+    return location;
 }
 
 void Window::removeComponent(int id)
 {
-    for (auto it = this->children.begin(); it != this->children.end(); ++it)
-    {
-        if (it->second->getId() == id)
-        {
-            this->children.erase(it);
-            break;
-        }
-    }
+    auto it = std::remove_if(this->children.begin(), this->children.end(), [&, id](std::pair<int, Flow::ObjectComponent *> cmp)
+                             { return cmp.second->getId() == id; });
+
+    this->children.erase(it, this->children.end());
+}
+
+void Window::removeComponentsByLabel(std::string label)
+{
+    auto it = std::remove_if(this->children.begin(), this->children.end(), [&, label](std::pair<int, Flow::ObjectComponent *> cmp)
+                             { return cmp.second->getLabel() == label; });
+
+    this->children.erase(it, this->children.end());
 }
 
 void Window::handleEvent(void *event)
@@ -155,21 +163,6 @@ void Window::handleEvent(void *event)
         }
         break;
     case SDL_MOUSEBUTTONDOWN:
-        // for (const auto &[id, component] : this->children)
-        // {
-        //     component.second->setFocused(false);
-        //     if (component.first != this->current_page)
-        //     {
-        //         component.second->forceUnhover();
-        //         continue;
-        //     }
-
-        //     if (component.second->isHovered())
-        //     {
-        //         component.second->setFocused(true);
-        //         component.second->handleOnClick(this);
-        //     }
-        // }
         for (auto it = this->children.begin(); it != this->children.end(); ++it)
         {
             if (it->first != this->current_page)
@@ -182,7 +175,10 @@ void Window::handleEvent(void *event)
             {
                 it->second->handleOnClick(this);
             }
-            else
+        }
+        for (auto it = this->children.begin(); it != this->children.end(); ++it)
+        {
+            if (!it->second->isHovered())
             {
                 it->second->handleOnClickOutside(this);
             }
@@ -191,16 +187,6 @@ void Window::handleEvent(void *event)
 
     // case we write a character or backspace
     case SDL_TEXTINPUT:
-        // for (const auto &[id, component] : this->children)
-        // {
-        //     if (component.first != this->current_page)
-        //     {
-        //         component.second->forceUnhover();
-        //         continue;
-        //     }
-
-        //     component.second->handleOnWrite(this, current_event->text.text);
-        // }
         for (auto it = this->children.begin(); it != this->children.end(); ++it)
         {
             if (it->first != this->current_page)
@@ -214,19 +200,6 @@ void Window::handleEvent(void *event)
         break;
     // handle backspace
     case SDL_KEYDOWN:
-        // if (current_event->key.keysym.sym == SDLK_BACKSPACE)
-        // {
-        //     for (const auto &[id, component] : this->children)
-        //     {
-        //         if (component.first != this->current_page)
-        //         {
-        //             component.second->forceUnhover();
-        //             continue;
-        //         }
-
-        //         component.second->handleOnWrite(this, "\b");
-        //     }
-        // }
         if (current_event->key.keysym.sym == SDLK_BACKSPACE)
         {
             for (auto it = this->children.begin(); it != this->children.end(); ++it)
@@ -250,17 +223,7 @@ void Window::render()
     SDL_RenderClear((SDL_Renderer *)this->renderer);
 
     bool clickable_component_hovered = false;
-    // for (const auto &[id, component] : this->children)
-    // {
-    //     if (component.first != this->current_page)
-    //         continue;
 
-    //     component.second->render(this);
-    //     if (component.second->isHovered() && component.second->isClickable())
-    //     {
-    //         clickable_component_hovered = true;
-    //     }
-    // }
     for (auto it = this->children.begin(); it != this->children.end(); ++it)
     {
         if (it->first != this->current_page)
@@ -305,24 +268,26 @@ void Window::mainLoop()
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
-            this->handleEvent(&event);
+            if (this->on_next_render != nullptr)
+            {
+                this->on_next_render();
+                this->on_next_render = nullptr;
+            }
             this->render();
+            this->handleEvent(&event);
         }
     }
+}
+
+void Window::onNextRender(std::function<void()> on_next_render)
+{
+    this->on_next_render = on_next_render;
 }
 
 void Window::setCurrentPage(int page_id)
 {
     this->current_page = page_id;
-    //     for (const auto &[id, component] : this->children)
-    //     {
-    //         if (component.first != this->current_page)
-    //         {
-    //             component.second->forceUnhover();
-    //             continue;
-    //         }
-    //     }
-    // }
+
     for (auto it = this->children.begin(); it != this->children.end(); ++it)
     {
         if (it->first != this->current_page)
